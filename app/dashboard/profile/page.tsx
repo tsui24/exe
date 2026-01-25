@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -415,7 +421,9 @@ export default function ProfilePage() {
                 <Separator className="my-4" />
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chu kỳ thanh toán:</span>
+                    <span className="text-muted-foreground">
+                      Chu kỳ thanh toán:
+                    </span>
                     <span className="font-medium">Hàng tháng</span>
                   </div>
                   <div className="flex justify-between">
@@ -447,9 +455,7 @@ export default function ProfilePage() {
               <Shield className="h-4 w-4" />
               Vùng Nguy Hiểm
             </CardTitle>
-            <CardDescription>
-              Các hành động không thể hoàn tác
-            </CardDescription>
+            <CardDescription>Các hành động không thể hoàn tác</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-destructive/50 p-4">
