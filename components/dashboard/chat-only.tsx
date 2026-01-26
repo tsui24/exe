@@ -25,110 +25,110 @@ interface ChatMessage {
 
 // Mock AI responses for general construction questions
 const mockResponses: Record<string, string> = {
-  default: `I can help you with questions about Vietnamese construction standards and regulations. Here are some topics I can assist with:
+  default: `Tôi có thể giúp bạn trả lời các câu hỏi về tiêu chuẩn và quy định xây dựng Việt Nam. Dưới đây là các chủ đề tôi có thể hỗ trợ:
 
-**Standards & Codes:**
-- TCVN (Vietnamese National Standards)
-- QCVN (National Technical Regulations)
-- Building codes and compliance requirements
+**Tiêu Chuẩn & Quy Chuẩn:**
+- TCVN (Tiêu chuẩn Việt Nam)
+- QCVN (Quy chuẩn kỹ thuật Quốc gia)
+- Quy định về xây dựng và tuân thủ
 
-**Common Topics:**
-- Structural design requirements
-- Fire safety regulations
-- Material specifications
-- Building permit processes
+**Các Chủ Đề Phổ Biến:**
+- Yêu cầu thiết kế kết cấu
+- Quy định phòng cháy chữa cháy
+- Đặc tính vật liệu
+- Quy trình cấp giấy phép xây dựng
 
-What would you like to know about?`,
-  fire: `According to **QCVN 06:2022** - National Technical Regulation on Fire Safety for Buildings and Structures:
+Bạn muốn biết về vấn đề gì?`,
+  fire: `Theo **QCVN 06:2022** - Quy chuẩn kỹ thuật Quốc gia về An toàn cháy cho Nhà và Công trình:
 
-**Key Requirements:**
-- Buildings must have fire escape routes with minimum width of 1.2m
-- Fire-resistant doors must meet EI 60 standard minimum
-- Smoke detectors required in all rooms larger than 50m2
-- Fire extinguishers must be placed every 20m in corridors
+**Yêu Cầu Chính:**
+- Công trình phải có lối thoát hiểm với chiều rộng tối thiểu 1,2m
+- Cửa chống cháy phải đạt tiêu chuẩn tối thiểu EI 60
+- Yêu cầu lắp đặt đầu báo khói ở các phòng có diện tích lớn hơn 50m2
+- Bình chữa cháy phải được đặt cách nhau 20m trong hành lang
 
-**For High-rise Buildings (>28m):**
-- REI 120 for structural elements
-- Automatic sprinkler systems required
-- Emergency lighting with 2-hour backup
+**Đối với Nhà Cao Tầng (>28m):**
+- REI 120 cho các kết cấu chịu lực
+- Yêu cầu hệ thống phun nước tự động
+- Đèn chiếu sáng khẩn cấp với nguồn dự phòng 2 giờ
 
-Would you like more details on any specific requirement?`,
-  concrete: `According to **TCVN 5574:2018** - Concrete and Reinforced Concrete Structures:
+Bạn có muốn biết chi tiết về yêu cầu cụ thể nào không?`,
+  concrete: `Theo **TCVN 5574:2018** - Kết cấu Bê tông và Bê tông Cốt thép:
 
-**Concrete Strength Classes:**
-- B15 (M200): Light structures, non-load bearing
-- B20 (M250): Residential foundations
-- B25 (M300): Standard structural use
-- B30 (M400): High-rise buildings, bridges
+**Cấp Độ Bền Bê Tông:**
+- B15 (M200): Kết cấu nhẹ, không chịu lực
+- B20 (M250): Móng công trình dân dụng
+- B25 (M300): Sử dụng kết cấu tiêu chuẩn
+- B30 (M400): Nhà cao tầng, cầu
 
-**Key Requirements:**
-- Minimum cover depth: 25-50mm (depending on exposure)
-- Water-cement ratio: max 0.55 for durability
-- Slump: 50-150mm for different applications
+**Yêu Cầu Chính:**
+- Độ dày lớp bảo vệ tối thiểu: 25-50mm (tùy điều kiện môi trường)
+- Tỷ lệ nước/xi măng: tối đa 0,55 để đảm bảo độ bền
+- Độ sụt: 50-150mm cho các ứng dụng khác nhau
 
-**Quality Control:**
-- Cube test specimens required every 50m3
-- 28-day strength verification mandatory
+**Kiểm Soát Chất Lượng:**
+- Yêu cầu mẫu thử khối lập phương mỗi 50m3
+- Bắt buộc kiểm tra cường độ sau 28 ngày
 
-Do you need information about specific applications?`,
-  foundation: `According to **TCVN 9362:2012** - Foundation Design Standards:
+Bạn có cần thông tin về ứng dụng cụ thể không?`,
+  foundation: `Theo **TCVN 9362:2012** - Tiêu chuẩn Thiết kế Móng:
 
-**Soil Investigation Requirements:**
-- Minimum 2 boreholes per 300m2
-- Depth: at least 2x foundation width below base
-- SPT tests every 1.5m depth
+**Yêu Cầu Khảo Sát Địa Chất:**
+- Tối thiểu 2 lỗ khoan mỗi 300m2
+- Độ sâu: ít nhất 2 lần chiều rộng móng tính từ đáy móng
+- Thí nghiệm SPT cứ mỗi 1,5m độ sâu
 
-**Foundation Types:**
-- Strip foundations: for walls and light structures
-- Pad foundations: for columns (min 300mm thick)
-- Raft foundations: for poor soil conditions
-- Pile foundations: when bearing capacity < 100 kPa
+**Các Loại Móng:**
+- Móng băng: cho tường và kết cấu nhẹ
+- Móng đơn: cho cột (dày tối thiểu 300mm)
+- Móng bè: cho điều kiện đất yếu
+- Móng cọc: khi sức chịu tải < 100 kPa
 
-**Safety Factors:**
-- Dead load: 1.35
-- Live load: 1.5
-- Seismic: per TCVN 9386:2012
+**Hệ Số An Toàn:**
+- Tải trọng tĩnh: 1.35
+- Tải trọng động: 1.5
+- Động đất: theo TCVN 9386:2012
 
-Any specific foundation design questions?`,
-  permit: `**Building Permit Process in Vietnam:**
+Bạn có câu hỏi cụ thể nào về thiết kế móng không?`,
+  permit: `**Quy Trình Cấp Giấy Phép Xây Dựng tại Việt Nam:**
 
-**Required Documents:**
-1. Application form (Mau don xin phep xay dung)
-2. Land use right certificate
-3. Architectural drawings (scale 1:100 or 1:200)
-4. Structural calculations
-5. Fire safety approval (for buildings >5 floors)
-6. Environmental impact assessment (if required)
+**Hồ Sơ Yêu Cầu:**
+1. Đơn xin phép xây dựng
+2. Giấy chứng nhận quyền sử dụng đất
+3. Bản vẽ kiến trúc (tỷ lệ 1:100 hoặc 1:200)
+4. Tính toán kết cấu
+5. Phê duyệt phòng cháy chữa cháy (công trình trên 5 tầng)
+6. Đánh giá tác động môi trường (nếu yêu cầu)
 
-**Processing Time:**
-- Individual houses: 15 working days
-- Commercial buildings: 30 working days
-- Industrial projects: 45 working days
+**Thời Gian Xử Lý:**
+- Nhà ở riêng lẻ: 15 ngày làm việc
+- Công trình thương mại: 30 ngày làm việc
+- Dự án công nghiệp: 45 ngày làm việc
 
-**Common Rejection Reasons:**
-- Incomplete documentation
-- Violation of zoning regulations
-- Insufficient setback distances
+**Lý Do Thường Bị Từ Chối:**
+- Hồ sơ không đầy đủ
+- Vi phạm quy hoạch
+- Khoảng lùi không đủ
 
-Need help with any specific permit requirement?`,
+Bạn cần hỗ trợ về yêu cầu giấy phép cụ thể nào không?`,
 };
 
 const suggestedQuestions = [
   {
     icon: Building,
-    text: "What are the foundation requirements?",
+    text: "Yêu cầu về thiết kế móng là gì?",
   },
   {
     icon: Scale,
-    text: "Fire safety regulations for buildings",
+    text: "Quy định phòng cháy chữa cháy",
   },
   {
     icon: FileText,
-    text: "Building permit process in Vietnam",
+    text: "Quy trình xin giấy phép xây dựng",
   },
   {
     icon: MessageSquare,
-    text: "Concrete strength requirements",
+    text: "Yêu cầu cường độ bê tông",
   },
 ];
 
@@ -139,14 +139,14 @@ export function ChatOnly() {
       role: "assistant",
       content: `Chào mừng đến với **ConstructionIQ**! Tôi là trợ lý AI chuyên về tuân thủ xây dựng của bạn.
 
-I can answer questions about:
-- Vietnamese construction standards (TCVN)
-- Building regulations (QCVN)
-- Permit requirements
-- Material specifications
-- Safety compliance
+Tôi có thể trả lời các câu hỏi về:
+- Tiêu chuẩn xây dựng Việt Nam (TCVN)
+- Quy chuẩn kỹ thuật (QCVN)
+- Yêu cầu giấy phép
+- Đặc tính vật liệu
+- Tuân thủ an toàn
 
-Ask me anything about construction compliance in Vietnam!`,
+Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt Nam!`,
     },
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -225,9 +225,9 @@ Ask me anything about construction compliance in Vietnam!`,
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="font-semibold">Construction Brain</h2>
+              <h2 className="font-semibold">Trợ Lý AI Xây Dựng</h2>
               <p className="text-xs text-muted-foreground">
-                AI-powered construction compliance assistant
+                Hỗ trợ tuân thủ quy chuẩn xây dựng thông minh
               </p>
             </div>
           </div>
@@ -307,7 +307,7 @@ Ask me anything about construction compliance in Vietnam!`,
           )}
           <div className="flex gap-2">
             <Input
-              placeholder="Ask about construction standards..."
+              placeholder="Hỏi về tiêu chuẩn xây dựng..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
@@ -335,29 +335,28 @@ Ask me anything about construction compliance in Vietnam!`,
               <Crown className="h-6 w-6 text-amber-600" />
             </div>
             <h3 className="text-lg font-semibold text-amber-900">
-              Upgrade to Pro
+              Nâng Cấp Lên Pro
             </h3>
             <p className="mt-2 text-sm text-amber-700">
-              Get full access to document analysis and compliance checking
-              features.
+              Truy cập đầy đủ tính năng phân tích tài liệu và kiểm tra tuân thủ.
             </p>
             <ul className="mt-4 space-y-2 text-sm text-amber-800">
               <li className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                Upload & analyze documents
+                Tải lên & phân tích tài liệu
               </li>
               <li className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Document-specific AI chat
+                Chat AI theo tài liệu cụ thể
               </li>
               <li className="flex items-center gap-2">
                 <Scale className="h-4 w-4" />
-                Compliance reports
+                Báo cáo tuân thủ
               </li>
             </ul>
             <Link href="/login">
               <Button className="mt-4 w-full bg-amber-600 hover:bg-amber-700">
-                Upgrade Now
+                Nâng Cấp Ngay
               </Button>
             </Link>
           </div>

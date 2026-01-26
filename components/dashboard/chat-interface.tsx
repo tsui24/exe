@@ -71,9 +71,9 @@ export function ChatInterface() {
           <Sparkles className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <h2 className="font-semibold">Construction Brain</h2>
+          <h2 className="font-semibold">Trợ Lý AI Xây Dựng</h2>
           <p className="text-xs text-muted-foreground">
-            AI-powered compliance assistant
+            Hỗ trợ tuân thủ quy chuẩn xây dựng
           </p>
         </div>
       </div>
@@ -168,7 +168,7 @@ export function ChatInterface() {
       <div className="border-t border-border p-4">
         <div className="flex gap-2">
           <Input
-            placeholder="Ask about construction standards, regulations..."
+            placeholder="Hỏi về tiêu chuẩn, quy chuẩn xây dựng..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="flex-1"
@@ -178,8 +178,8 @@ export function ChatInterface() {
           </Button>
         </div>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Được hỗ trợ bởi ConstructionIQ • Tham chiếu TCVN, QCVN và quy chuẩn
-          construction laws
+          Được hỗ trợ bởi ConstructionIQ • Tham chiếu TCVN, QCVN và luật xây
+          dựng
         </p>
       </div>
     </Card>

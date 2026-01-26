@@ -352,8 +352,8 @@ export default function HomePage() {
           plans={[
             {
               name: "Cơ Bản",
-              price: "997",
-              yearlyPrice: "797",
+              price: "50",
+              yearlyPrice: "30",
               period: "tháng",
               features: [
                 "Hỏi đáp AI không giới hạn",
@@ -370,8 +370,8 @@ export default function HomePage() {
             },
             {
               name: "Chuyên Nghiệp",
-              price: "2497",
-              yearlyPrice: "1997",
+              price: "200",
+              yearlyPrice: "150",
               period: "tháng",
               features: [
                 "Tất cả tính năng gói Cơ Bản",
@@ -390,9 +390,9 @@ export default function HomePage() {
             },
             {
               name: "Doanh Nghiệp",
-              price: "4997",
-              yearlyPrice: "3997",
-              period: "tháng",
+              price: "Liên hệ",
+              yearlyPrice: "Liên hệ",
+              period: "",
               features: [
                 "Tất cả tính năng gói Chuyên Nghiệp",
                 "Tích hợp API tùy chỉnh",
@@ -622,10 +622,10 @@ export default function HomePage() {
                     <Mail className="h-4 w-4" />
                   </div>
                   <a
-                    href="mailto:support@vietbuildai.vn"
+                    href="mailto:contructIQ.work@gmail.com"
                     className="hover:text-white transition-colors duration-300"
                   >
-                    support@vietbuildai.vn
+                    contructIQ.work@gmail.com
                   </a>
                 </div>
 
@@ -634,10 +634,10 @@ export default function HomePage() {
                     <Phone className="h-4 w-4" />
                   </div>
                   <a
-                    href="tel:+84123456789"
+                    href="tel:+84913620252"
                     className="hover:text-white transition-colors duration-300"
                   >
-                    (+84) 123 456 789
+                    0913 620 252
                   </a>
                 </div>
 
