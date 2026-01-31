@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .openai_client import chat_with_model
+from openai_client import chat_with_model
 
 
 class ChatRequest(BaseModel):
@@ -16,6 +17,15 @@ app = FastAPI(
     title="backend-ai",
     description="Simple FastAPI service that proxies requests to OpenAI ChatGPT.",
     version="0.1.0",
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Next.js dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -52,7 +62,7 @@ def main() -> None:
     """
     import uvicorn
 
-    uvicorn.run("backend_ai.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend_ai.main:app", host="0.0.0.0", port=8002, reload=True)
 
 
 if __name__ == "__main__":

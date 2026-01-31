@@ -5,10 +5,13 @@ Thin wrapper quanh OpenAI Python SDK để gọi ChatGPT.
 import os
 from typing import Optional
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
-from .prompt import SYSTEM_PROMPT
+from prompt import SYSTEM_PROMPT
 
+# Load environment variables from .env file
+load_dotenv()
 
 _client: Optional[OpenAI] = None
 

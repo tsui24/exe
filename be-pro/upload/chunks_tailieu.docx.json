@@ -1,0 +1,192 @@
+[
+  {
+    "id": 0,
+    "content": "Tiêu chuẩn xây dựng là các quy định kỹ thuật do Nhà nước ban hành hoặc công nhận, nhằm:\n\nĐảm bảo an toàn, chất lượng, độ bền, vệ sinh, môi trường\n\nLàm cơ sở cho thiết kế – thi công – nghiệm thu – quản lý công trình\n\nỞ Việt Nam, hệ thống này chịu sự quản lý chính của:\n\nBộ Xây dựng\n\nPhối hợp với Bộ KH&CN, Bộ GTVT, Bộ Công Thương, v.v.",
+    "filename": "tailieu.docx",
+    "section_title": "Tiêu chuẩn xây dựng là gì?",
+    "type": "text",
+    "position": 0,
+    "tokens": 97,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 1,
+    "content": "📌 Bắt buộc áp dụng\n\nKý hiệu: QCVN xx:yyyy/BXD\n\nBan hành bởi Bộ Xây dựng\n\nLà luật kỹ thuật – không tuân là vi phạm pháp luật\n\n📘 Ví dụ:\n\nQCVN 06:2022/BXD – An toàn cháy cho nhà và công trình\n\nQCVN 04-1:2015/BXD – Nhà chung cư\n\nQCVN 09:2017/BXD – Công trình sử dụng năng lượng hiệu quả\n\n👉 Dùng trong:\n\nThẩm định thiết kế\n\nCấp phép xây dựng\n\nKiểm tra PCCC, nghiệm thu",
+    "filename": "tailieu.docx",
+    "section_title": "Quy chuẩn kỹ thuật quốc gia – QCVN",
+    "type": "text",
+    "position": 0,
+    "tokens": 97,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 2,
+    "content": "📌 Khuyến khích áp dụng (trở thành bắt buộc nếu được viện dẫn trong hợp đồng, hồ sơ thiết kế)\n\nKý hiệu: TCVN xxxx:yyyy\n\nDo Bộ KH&CN công bố\n\nChi tiết kỹ thuật hơn QCVN\n\n📘 Ví dụ:\n\nTCVN 2737:2023 – Tải trọng và tác động\n\nTCVN 5574:2018 – Kết cấu bê tông và bê tông cốt thép\n\nTCVN 5575:2012 – Kết cấu thép\n\nTCVN 9362:2012 – Tiêu chuẩn thiết kế nền nhà và công trình\n\n👉 Dùng cho:\n\nTính toán kết cấu\n\nThiết kế chi tiết\n\nLập hồ sơ kỹ thuật",
+    "filename": "tailieu.docx",
+    "section_title": "Tiêu chuẩn Việt Nam – TCVN",
+    "type": "text",
+    "position": 0,
+    "tokens": 120,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 3,
+    "content": "📌 Áp dụng nội bộ (do doanh nghiệp ban hành)\n\nDùng khi:\n\nChưa có TCVN tương ứng\n\nCông nghệ/giải pháp đặc thù\n\nKhông được trái QCVN",
+    "filename": "tailieu.docx",
+    "section_title": "Tiêu chuẩn cơ sở – TCCS",
+    "type": "text",
+    "position": 0,
+    "tokens": 34,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 4,
+    "content": "📌 Áp dụng khi:\n\nTCVN chưa đầy đủ\n\nCó chấp thuận của chủ đầu tư & cơ quan quản lý\n\n📘 Thường gặp:\n\nEurocode (EN)\n\nASTM, ACI, AISC (Mỹ)\n\nBS (Anh)\n\nJIS (Nhật)\n\n⚠️ Phải nêu rõ trong hồ sơ thiết kế và thuyết minh",
+    "filename": "tailieu.docx",
+    "section_title": "Tiêu chuẩn nước ngoài được chấp nhận",
+    "type": "text",
+    "position": 0,
+    "tokens": 59,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 5,
+    "content": "🏗️ Kết cấu\n\nTCVN 2737 – Tải trọng\n\nTCVN 5574 – BTCT\n\nTCVN 5575 – Thép\n\nTCVN 9386 – Thiết kế chống động đất",
+    "filename": "tailieu.docx",
+    "section_title": "Cấu trúc hệ thống tiêu chuẩn theo lĩnh vực",
+    "type": "text",
+    "position": 0,
+    "tokens": 32,
+    "content_json": null,
+    "heading_level": 1
+  },
+  {
+    "id": 6,
+    "content": "TCVN 9362 – Nền nhà\n\nTCVN 9437 – Khảo sát địa kỹ thuật\n\nTCVN 10304 – Móng cọc",
+    "filename": "tailieu.docx",
+    "section_title": "Nền móng – địa kỹ thuật",
+    "type": "text",
+    "position": 0,
+    "tokens": 24,
+    "content_json": null,
+    "heading_level": 3
+  },
+  {
+    "id": 7,
+    "content": "QCVN 06 – An toàn cháy\n\nTCVN 2622 – Phòng cháy cho nhà và công trình",
+    "filename": "tailieu.docx",
+    "section_title": "An toàn – PCCC",
+    "type": "text",
+    "position": 0,
+    "tokens": 21,
+    "content_json": null,
+    "heading_level": 3
+  },
+  {
+    "id": 8,
+    "content": "QCVN 04 – Chung cư\n\nTCVN 4604 – Trụ sở cơ quan\n\nTCVN 4451 – Nhà ở\n\n⚡ Cơ điện (MEP)\n\nTCVN 7447 – Hệ thống điện hạ áp\n\nTCVN 4513 – Cấp nước\n\nTCVN 4474 – Thoát nước",
+    "filename": "tailieu.docx",
+    "section_title": "Kiến trúc – công năng",
+    "type": "text",
+    "position": 0,
+    "tokens": 51,
+    "content_json": null,
+    "heading_level": 3
+  },
+  {
+    "id": 9,
+    "content": "QCVN 09 – Hiệu quả năng lượng\n\nTCVN 7957 – Thoát nước đô thị",
+    "filename": "tailieu.docx",
+    "section_title": "Môi trường – năng lượng",
+    "type": "text",
+    "position": 0,
+    "tokens": 19,
+    "content_json": null,
+    "heading_level": 3
+  },
+  {
+    "id": 10,
+    "content": "1️⃣ Luật Xây dựng\n2️⃣ Nghị định – Thông tư\n3️⃣ QCVN (bắt buộc)\n4️⃣ TCVN\n5️⃣ Tiêu chuẩn nước ngoài / TCCS",
+    "filename": "tailieu.docx",
+    "section_title": "Thứ tự ưu tiên pháp lý",
+    "type": "text",
+    "position": 0,
+    "tokens": 30,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 11,
+    "content": "❗ Không được viện dẫn TCVN để làm trái QCVN\n\nVí dụ:\n\nQCVN yêu cầu 2 lối thoát nạn → dù TCVN cho phép 1 vẫn không được dùng",
+    "filename": "tailieu.docx",
+    "section_title": "Một nguyên tắc rất quan trọng",
+    "type": "text",
+    "position": 0,
+    "tokens": 38,
+    "content_json": null,
+    "heading_level": 2
+  },
+  {
+    "id": 12,
+    "content": "| Giai đoạn | Vai trò |\n| --- | --- |\n| Quy hoạch | Kiểm soát mật độ, chiều cao |\n| Thiết kế | Tính toán an toàn |\n| Thẩm tra | Cơ sở pháp lý |\n| Thi công | Kiểm soát chất lượng |\n| Nghiệm thu | Điều kiện đưa vào sử dụng |\n| Vận hành | An toàn – bền vững |",
+    "filename": "tailieu.docx",
+    "section_title": "Vai trò của tiêu chuẩn trong vòng đời công trình",
+    "type": "table",
+    "position": 0,
+    "tokens": 93,
+    "content_json": [
+      {
+        "Giai đoạn": "Quy hoạch",
+        "Vai trò": "Kiểm soát mật độ, chiều cao"
+      },
+      {
+        "Giai đoạn": "Thiết kế",
+        "Vai trò": "Tính toán an toàn"
+      },
+      {
+        "Giai đoạn": "Thẩm tra",
+        "Vai trò": "Cơ sở pháp lý"
+      },
+      {
+        "Giai đoạn": "Thi công",
+        "Vai trò": "Kiểm soát chất lượng"
+      },
+      {
+        "Giai đoạn": "Nghiệm thu",
+        "Vai trò": "Điều kiện đưa vào sử dụng"
+      },
+      {
+        "Giai đoạn": "Vận hành",
+        "Vai trò": "An toàn – bền vững"
+      }
+    ],
+    "heading_level": 1
+  },
+  {
+    "id": 13,
+    "content": "❌ TCVN là bắt buộc → Sai\n❌ Áp tiêu chuẩn nước ngoài là không hợp pháp → Sai\n❌ Chỉ cần theo tiêu chuẩn, không cần theo luật → Sai",
+    "filename": "tailieu.docx",
+    "section_title": "Một số hiểu lầm phổ biến",
+    "type": "text",
+    "position": 0,
+    "tokens": 41,
+    "content_json": null,
+    "heading_level": 1
+  },
+  {
+    "id": 14,
+    "content": "Học QCVN trước – TCVN sau\n\nNhớ tiêu chuẩn “xương sống”:\n\nTCVN 2737\n\nQCVN 06\n\nTCVN 5574\n\nLuôn xem năm ban hành (rất hay bị dùng bản cũ)\n\nNếu bạn muốn, mình có thể:\n\n📘 Tóm tắt chi tiết từng QCVN/TCVN\n\n🧠 So sánh TCVN vs Eurocode\n\n🧩 Làm sơ đồ tư duy hệ thống tiêu chuẩn xây dựng\n\n🏗️ Áp dụng tiêu chuẩn cho một công trình cụ thể\n\nBạn đang cần lý thuyết này cho học tập, nghiên cứu, hay làm dự án thực tế?",
+    "filename": "tailieu.docx",
+    "section_title": "Gợi ý cách học & tra cứu hiệu quả",
+    "type": "text",
+    "position": 0,
+    "tokens": 114,
+    "content_json": null,
+    "heading_level": 1
+  }
+]

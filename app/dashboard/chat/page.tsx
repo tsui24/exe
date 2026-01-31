@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessage {
   id: string;
@@ -156,7 +158,7 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
   }, [messages]);
 
   const handleSendMessage = useCallback(
-    (messageText?: string) => {
+    async (messageText?: string) => {
       const text = messageText || inputValue;
       if (!text.trim()) return;
 
@@ -170,8 +172,34 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
       setInputValue("");
       setIsTyping(true);
 
-      // Simulate AI response
-      setTimeout(() => {
+      try {
+        // Call backend AI API
+        const response = await fetch("http://localhost:8002/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: text.trim(),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const aiMessage: ChatMessage = {
+          id: `msg_${Date.now() + 1}`,
+          role: "assistant",
+          content: data.reply,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } catch (error) {
+        console.error("Error calling AI API:", error);
+
+        // Fallback to mock response if API fails
         const lowerInput = text.toLowerCase();
         let response = mockResponses.default;
 
@@ -204,11 +232,12 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
         const aiMessage: ChatMessage = {
           id: `msg_${Date.now() + 1}`,
           role: "assistant",
-          content: response,
+          content: `⚠️ Không thể kết nối đến AI backend. Sử dụng mock response:\n\n${response}`,
         };
         setMessages((prev) => [...prev, aiMessage]);
+      } finally {
         setIsTyping(false);
-      }, 1500);
+      }
     },
     [inputValue],
   );
@@ -249,14 +278,17 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
                     : "bg-muted"
                 }`}
               >
-                <div
-                  className="whitespace-pre-wrap text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{
-                    __html: message.content
-                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                      .replace(/\n/g, "<br />"),
-                  }}
-                />
+                {message.role === "user" ? (
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {message.content}
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-pre:bg-black prose-pre:text-white prose-table:text-sm">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
             </div>
 

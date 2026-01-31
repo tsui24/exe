@@ -28,11 +28,17 @@ import {
 } from "@/lib/document-context";
 import { useAuth } from "@/lib/auth-context";
 import { ChatOnly } from "@/components/dashboard/chat-only";
+import { documentApi, chatApi } from "@/lib/api-client";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  sources?: Array<{
+    title?: string;
+    content?: string;
+    metadata?: Record<string, any>;
+  }>;
 }
 
 // Mock analysis results generator
@@ -138,6 +144,9 @@ function ProDashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    number | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { documents, addDocument, updateDocument } = useDocuments();
@@ -186,9 +195,12 @@ function ProDashboard() {
   );
 
   const handleFiles = useCallback(
-    (files: FileList) => {
-      Array.from(files).forEach((file) => {
-        const docId = addDocument({
+    async (files: FileList) => {
+      const fileArray = Array.from(files);
+
+      // Add documents to UI immediately
+      const docIds = fileArray.map((file) =>
+        addDocument({
           name: file.name,
           type: file.type || "application/pdf",
           size: file.size,
@@ -196,16 +208,57 @@ function ProDashboard() {
           progress: 0,
           uploadedBy: user?.username || "unknown",
           pages: Math.floor(Math.random() * 50) + 5,
+        }),
+      );
+
+      try {
+        // Upload files to backend
+        const response = await documentApi.upload({
+          files: fileArray,
+          user_id: user?.id.toString() || "1",
+          max_workers: fileArray.length > 1 ? 4 : undefined,
         });
 
-        // Simulate upload then processing
-        setTimeout(() => {
-          updateDocument(docId, { status: "processing", progress: 10 });
-          simulateProcessing(docId);
-        }, 1000);
-      });
+        // Store conversation ID for chat
+        setCurrentConversationId(response.conversation_id);
+
+        // Update documents based on upload results
+        response.results.forEach((result, index) => {
+          if (result.status === "success") {
+            // Generate mock analysis for successful uploads
+            const analysis = generateMockAnalysis();
+            updateDocument(docIds[index], {
+              status: "ready",
+              progress: 100,
+              analysisResults: analysis,
+            });
+          } else {
+            updateDocument(docIds[index], {
+              status: "error",
+              progress: 0,
+            });
+          }
+        });
+
+        // Auto-select first successful document
+        if (response.results[0]?.status === "success") {
+          const firstDoc = documents.find((d) => d.id === docIds[0]);
+          if (firstDoc) {
+            setTimeout(() => selectDocument(firstDoc), 500);
+          }
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        // Mark all as error
+        docIds.forEach((docId) => {
+          updateDocument(docId, {
+            status: "error",
+            progress: 0,
+          });
+        });
+      }
     },
-    [addDocument, updateDocument, user, simulateProcessing],
+    [addDocument, updateDocument, user, documents],
   );
 
   const handleDrop = useCallback(
@@ -229,8 +282,8 @@ function ProDashboard() {
     [handleFiles],
   );
 
-  const handleSendMessage = useCallback(() => {
-    if (!inputValue.trim() || !activeDocument) return;
+  const handleSendMessage = useCallback(async () => {
+    if (!inputValue.trim()) return;
 
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
@@ -239,31 +292,84 @@ function ProDashboard() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const messageContent = inputValue.trim();
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const lowerInput = inputValue.toLowerCase();
-      let response = mockResponses.default;
-      if (lowerInput.includes("fire") || lowerInput.includes("cháy")) {
-        response = mockResponses.fire;
-      } else if (
-        lowerInput.includes("concrete") ||
-        lowerInput.includes("bê tông")
-      ) {
-        response = mockResponses.concrete;
+    try {
+      // Call real chat API
+      const response = await chatApi.sendMessage({
+        message: messageContent,
+        conversation_id: currentConversationId || undefined,
+        chat_history: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+
+      // Priority: sources > message
+      let displayContent = response.message;
+
+      if (response.sources && response.sources.length > 0) {
+        // Deduplicate sources based on content only (ignore section_title variations)
+        const uniqueSources = response.sources.reduce((acc, src) => {
+          const contentKey = (src.content || "").trim();
+          if (contentKey && !acc.has(contentKey)) {
+            acc.set(contentKey, src);
+          }
+          return acc;
+        }, new Map());
+
+        const deduplicatedSources = Array.from(uniqueSources.values());
+
+        // If we have unique sources, format them nicely
+        if (deduplicatedSources.length > 0) {
+          displayContent = deduplicatedSources
+            .map((src, idx) => {
+              let srcText = `**📚 Nguồn ${idx + 1}**`;
+
+              // Add filename if available
+              const filename = (src as any).filename;
+              const sectionTitle = (src as any).section_title;
+
+              if (filename || sectionTitle) {
+                srcText += " - ";
+                if (filename) srcText += `_${filename}_`;
+                if (sectionTitle) srcText += ` (${sectionTitle})`;
+              } else if (src.title) {
+                srcText += ` - ${src.title}`;
+              }
+
+              srcText += "\n\n";
+              if (src.content) srcText += src.content;
+
+              return srcText;
+            })
+            .join("\n\n---\n\n");
+        }
       }
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: "assistant",
-        content: response,
+        content: displayContent,
+        sources: response.sources,
       };
+
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        role: "assistant",
+        content:
+          "Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn. Vui lòng thử lại.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
-  }, [inputValue, activeDocument]);
+    }
+  }, [inputValue, currentConversationId, messages]);
 
   const selectDocument = (doc: Document) => {
     setActiveDocument(doc);
