@@ -1,0 +1,29 @@
+[
+  {
+    "id": 0,
+    "content": "MỤC LỤC",
+    "filename": "tai_lieu_xay_dung_viet_nam_10_trang.docx",
+    "section_title": "TÀI LIỆU TỔNG QUAN VỀ NGÀNH XÂY DỰNG VIỆT NAM",
+    "type": "text",
+    "position": 0,
+    "tokens": 3,
+    "content_json": null,
+    "heading_level": 1
+  },
+  {
+    "id": 1,
+    "content": "| Thông tin | Chi tiết |\n| --- | --- |\n| Nghị định 15/2021/NĐ-CP về quản lý dự án đầu tư xây dựng. - Nghị định 06/2021/NĐ-CP về quản lý chất lượng, thi công và bảo trì công trình. - Thông tư 10/2021/TT-BXD hướng dẫn xác định chi phí đầu tư xây dựng. Hệ thống pháp luật giúp đảm bảo trật tự, an toàn và hiệu quả trong hoạt động xây dựng. 4. PHÂN LOẠI CÔNG TRÌNH XÂY DỰNG |  |\n| Công trình dân dụng | nhà ở, trường học, bệnh viện. - Công trình công nghiệp: nhà máy, xí nghiệp, kho bãi. - Công trình giao thông: đường bộ, cầu, hầm, sân bay. - Công trình thủy lợi: hồ chứa, đập, kênh mương. - Công trình hạ tầng kỹ thuật: cấp thoát nước, điện chiếu sáng, xử lý rác. 5. QUY TRÌNH ĐẦU TƯ XÂY DỰNG |\n| Kiểm soát vật liệu đầu vào. - Giám sát thi công. - Kiểm tra an toàn lao động. - Nghiệm thu từng giai đoạn. Mục tiêu là đảm bảo công trình đạt yêu cầu kỹ thuật, an toàn và bền vững. 7. AN TOÀN LAO ĐỘNG TRONG XÂY DỰNG |  |\n| Trang bị đầy đủ bảo hộ. - Huấn luyện an toàn. - Kiểm tra máy móc, thiết bị. - Tổ chức thi công hợp lý. 8. QUẢN LÝ CHI PHÍ VÀ TIẾN ĐỘ |  |",
+    "filename": "tai_lieu_xay_dung_viet_nam_10_trang.docx",
+    "section_title": "11. Kết luận",
+    "type": "table",
+    "position": 0,
+    "tokens": 943,
+    "content_json": [
+      {
+        "Thông tin": "Công trình dân dụng",
+        "Chi tiết": "nhà ở, trường học, bệnh viện. - Công trình công nghiệp: nhà máy, xí nghiệp, kho bãi. - Công trình giao thông: đường bộ, cầu, hầm, sân bay. - Công trình thủy lợi: hồ chứa, đập, kênh mương. - Công trình hạ tầng kỹ thuật: cấp thoát nước, điện chiếu sáng, xử lý rác. 5. QUY TRÌNH ĐẦU TƯ XÂY DỰNG"
+      }
+    ],
+    "heading_level": 2
+  }
+]

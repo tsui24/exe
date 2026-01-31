@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth, type UserPlan } from "@/lib/auth-context";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -27,21 +27,23 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const success = login(username, password, selectedPlan);
-    if (success) {
-      // Check if admin
-      if (username === "admin" && password === "admin") {
-        router.push("/admin");
+    try {
+      const success = await login(phone, password, selectedPlan);
+      if (success) {
+        // Check if admin
+        if (phone === "admin" && password === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
-        router.push("/dashboard");
+        setError("Số điện thoại hoặc mật khẩu không đúng");
       }
-    } else {
-      setError("Invalid username or password");
+    } catch (error) {
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -109,15 +111,15 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username">Tên Đăng Nhập</Label>
+                <Label htmlFor="phone">Số Điện Thoại</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Nhập tên đăng nhập"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="phone"
+                  type="tel"
+                  placeholder="Nhập số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   required
-                  autoComplete="username"
+                  autoComplete="tel"
                 />
               </div>
 

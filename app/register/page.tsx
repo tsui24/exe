@@ -11,10 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth, type UserPlan } from "@/lib/auth-context";
+import { authApi } from "@/lib/api-client";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,8 +37,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!email.trim() || !email.includes("@")) {
-      setError("Vui lòng nhập email hợp lệ");
+    if (!phone.trim() || phone.length < 10) {
+      setError("Vui lòng nhập số điện thoại hợp lệ");
       return;
     }
 
@@ -58,18 +59,35 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Call register API
+      const result = await authApi.register({
+        username,
+        phone,
+        password,
+      });
 
-    // In a real app, you would register the user here
-    // For demo, we'll just log them in
-    const success = login(username, password, selectedPlan);
-    if (success) {
-      router.push("/dashboard");
-    } else {
+      if ("error" in result) {
+        setError(result.error);
+        setIsLoading(false);
+        return;
+      }
+
+      // Auto login after successful registration
+      const loginSuccess = await login(phone, password, selectedPlan);
+      if (loginSuccess) {
+        router.push("/dashboard");
+      } else {
+        setError(
+          "Đăng ký thành công nhưng không thể đăng nhập. Vui lòng thử đăng nhập lại.",
+        );
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
       setError("Đăng ký thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -150,15 +168,15 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="phone">Số Điện Thoại</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Nhập địa chỉ email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="phone"
+                  type="tel"
+                  placeholder="Nhập số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   required
-                  autoComplete="email"
+                  autoComplete="tel"
                 />
               </div>
 

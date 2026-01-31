@@ -7,12 +7,15 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { authApi, type UserResponse } from "./api-client";
 
 export type UserRole = "user" | "admin";
 export type UserPlan = "normal" | "pro";
 
 export interface User {
+  id: number;
   username: string;
+  phone: string;
   role: UserRole;
   plan: UserPlan;
   name: string;
@@ -20,7 +23,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, plan?: UserPlan) => boolean;
+  login: (phone: string, password: string, plan?: UserPlan) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -39,34 +42,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (username: string, password: string, plan: UserPlan = "normal"): boolean => {
-    // Admin credentials
-    if (username === "admin" && password === "admin") {
-      const adminUser: User = {
-        username: "admin",
-        role: "admin",
-        plan: "pro",
-        name: "Administrator",
-      };
-      setUser(adminUser);
-      localStorage.setItem("vietbuild_user", JSON.stringify(adminUser));
-      return true;
-    }
-    
-    // Regular user (any non-empty username/password)
-    if (username && password) {
+  const login = async (
+    phone: string,
+    password: string,
+    plan: UserPlan = "normal",
+  ): Promise<boolean> => {
+    try {
+      // Check for admin credentials (hardcoded for demo)
+      if (phone === "admin" && password === "admin") {
+        const adminUser: User = {
+          id: 0,
+          username: "admin",
+          phone: "admin",
+          role: "admin",
+          plan: "pro",
+          name: "Administrator",
+        };
+        setUser(adminUser);
+        localStorage.setItem("vietbuild_user", JSON.stringify(adminUser));
+        return true;
+      }
+
+      // Call real API for regular users
+      const result = await authApi.login({ phone, password });
+
+      if ("error" in result) {
+        console.error("Login failed:", result.error);
+        return false;
+      }
+
+      // Create user object with API response
       const regularUser: User = {
-        username,
+        id: result.id,
+        username: result.username,
+        phone: result.phone,
         role: "user",
         plan,
-        name: username.charAt(0).toUpperCase() + username.slice(1),
+        name:
+          result.username.charAt(0).toUpperCase() + result.username.slice(1),
       };
+
       setUser(regularUser);
       localStorage.setItem("vietbuild_user", JSON.stringify(regularUser));
       return true;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
     }
-    
-    return false;
   };
 
   const logout = () => {

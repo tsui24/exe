@@ -352,8 +352,8 @@ export default function HomePage() {
           plans={[
             {
               name: "Cơ Bản",
-              price: "50",
-              yearlyPrice: "30",
+              price: "299",
+              yearlyPrice: "249",
               period: "tháng",
               features: [
                 "Hỏi đáp AI không giới hạn",
@@ -370,8 +370,8 @@ export default function HomePage() {
             },
             {
               name: "Chuyên Nghiệp",
-              price: "200",
-              yearlyPrice: "150",
+              price: "499",
+              yearlyPrice: "449",
               period: "tháng",
               features: [
                 "Tất cả tính năng gói Cơ Bản",
