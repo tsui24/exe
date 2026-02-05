@@ -9,4 +9,6 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "openai>=1.0.0",
     "pydantic>=2.0.0",
+    "google-genai>=1.61.0",
+    "python-multipart>=0.0.22",
 ]
