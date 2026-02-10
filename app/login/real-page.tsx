@@ -3,20 +3,19 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Building2, Eye, EyeOff, Loader2, Crown, User } from "lucide-react";
+import { Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { authApi } from "@/lib/api-client";
 
-export default function LoginPage() {
+export default function RealLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"normal" | "pro">("normal");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,38 +24,24 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      console.log("Logging in with username:", username);
       const response = await authApi.login({ username, password });
-      console.log("Login response:", response);
 
-      // Store token in localStorage (both keys for compatibility)
-      localStorage.setItem("token", response.access_token);
+      // Store token in localStorage
       localStorage.setItem("access_token", response.access_token);
 
       // Get user info
       const user = await authApi.getCurrentUser(response.access_token);
-      console.log("User info:", user);
-
-      // Store user and plan BEFORE redirect
       localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("user_plan", selectedPlan);
 
-      // Wait a bit to ensure localStorage is written
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Trigger auth context reload with storage event
-      window.dispatchEvent(new Event("storage"));
-
-      // Redirect based on admin status with full page reload
-      console.log("Redirecting to:", user.is_admin ? "/admin" : "/dashboard");
+      // Redirect based on admin status
       if (user.is_admin) {
-        window.location.href = "/admin";
+        router.push("/admin");
       } else {
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       }
     } catch (err: any) {
-      console.error("Login error:", err);
       setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -88,43 +73,6 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Plan Selection */}
-              <div className="space-y-2">
-                <Label>Loại Tài Khoản</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan("normal")}
-                    className={`relative flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                      selectedPlan === "normal"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <User className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-sm font-medium">Cơ Bản</span>
-                    <span className="text-xs text-muted-foreground">
-                      Hỏi Đáp AI
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan("pro")}
-                    className={`relative flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                      selectedPlan === "pro"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Crown className="h-6 w-6 text-amber-500" />
-                    <span className="text-sm font-medium">Pro</span>
-                    <span className="text-xs text-muted-foreground">
-                      Toàn Bộ Tính Năng
-                    </span>
-                  </button>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="username">Tên Đăng Nhập</Label>
                 <Input

@@ -16,11 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { FeedbackButtons } from "@/components/dashboard/feedback-buttons";
+import { aiBackendApi } from "@/lib/api-client";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  userMessage?: string; // Store original user message for feedback
 }
 
 // Mock AI responses for general construction questions
@@ -173,27 +176,14 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
       setIsTyping(true);
 
       try {
-        // Call backend AI API
-        const response = await fetch("http://localhost:8002/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: text.trim(),
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const data = await response.json();
+        // Call backend AI API using api-client
+        const data = await aiBackendApi.chat(text.trim());
 
         const aiMessage: ChatMessage = {
           id: `msg_${Date.now() + 1}`,
           role: "assistant",
           content: data.reply,
+          userMessage: text.trim(), // Store user message for feedback
         };
         setMessages((prev) => [...prev, aiMessage]);
       } catch (error) {
@@ -233,6 +223,7 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
           id: `msg_${Date.now() + 1}`,
           role: "assistant",
           content: `⚠️ Không thể kết nối đến AI backend. Sử dụng mock response:\n\n${response}`,
+          userMessage: text.trim(), // Store user message for feedback
         };
         setMessages((prev) => [...prev, aiMessage]);
       } finally {
@@ -290,6 +281,14 @@ Hãy hỏi tôi bất kỳ điều gì về tuân thủ xây dựng tại Việt
                   </div>
                 )}
               </div>
+              {message.role === "assistant" && (
+                <div className="mt-2">
+                  <FeedbackButtons
+                    message={message.userMessage || ""}
+                    aiResponse={message.content}
+                  />
+                </div>
+              )}
             </div>
 
             {message.role === "user" && (

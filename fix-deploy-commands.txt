@@ -1,0 +1,26 @@
+# Đã unzip nhầm thư mục! Project thực sự ở /home/ubuntu/EXE
+
+# BƯỚC 1: Unzip lại vào đúng thư mục
+cd ~
+unzip -o deploy_20260206_095649.zip -d /home/ubuntu/EXE
+
+# BƯỚC 2: Cài packages Python
+cd /home/ubuntu/EXE
+source .venv/bin/activate
+pip install google-genai Pillow
+
+# BƯỚC 3: Restart backend
+sudo systemctl restart backend
+sudo systemctl status backend
+
+# BƯỚC 4: Rebuild frontend
+npm install
+npm run build
+
+# BƯỚC 5: Restart PM2 (tên đúng là nextjs-frontend)
+pm2 restart nextjs-frontend
+pm2 status
+
+# BƯỚC 6: Kiểm tra
+curl -I http://localhost:3000
+curl -I http://localhost:8002/docs

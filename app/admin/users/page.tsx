@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Search,
@@ -10,6 +10,7 @@ import {
   Mail,
   Calendar,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,90 +31,161 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { adminApi, type UserResponse } from "@/lib/api-client";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-// Mock users data
-const mockUsers = [
-  {
-    id: "1",
-    name: "Administrator",
-    email: "admin@vietbuild.ai",
-    role: "admin",
-    documentsUploaded: 0,
-    lastActive: "Just now",
-    createdAt: "2024-01-01",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Nguyen Van A",
-    email: "nguyen.a@company.com",
-    role: "user",
-    documentsUploaded: 12,
-    lastActive: "2 hours ago",
-    createdAt: "2024-06-15",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Tran Thi B",
-    email: "tran.b@company.com",
-    role: "user",
-    documentsUploaded: 8,
-    lastActive: "1 day ago",
-    createdAt: "2024-07-20",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Le Van C",
-    email: "le.c@company.com",
-    role: "user",
-    documentsUploaded: 5,
-    lastActive: "3 hours ago",
-    createdAt: "2024-08-10",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Pham Thi D",
-    email: "pham.d@company.com",
-    role: "user",
-    documentsUploaded: 15,
-    lastActive: "5 minutes ago",
-    createdAt: "2024-05-01",
-    status: "active",
-  },
-  {
-    id: "6",
-    name: "Hoang Van E",
-    email: "hoang.e@company.com",
-    role: "user",
-    documentsUploaded: 3,
-    lastActive: "1 week ago",
-    createdAt: "2024-09-01",
-    status: "inactive",
-  },
-];
-
 function Loading() {
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  );
 }
 
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  const filteredUsers = mockUsers.filter(
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const data = await adminApi.listUsers(token);
+      setUsers(data);
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể tải danh sách người dùng",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditUser = (user: UserResponse) => {
+    setEditingUser(user);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await adminApi.updateUser(
+        editingUser.id,
+        {
+          full_name: editingUser.full_name,
+          is_active: editingUser.is_active,
+          is_admin: editingUser.is_admin,
+        },
+        token,
+      );
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật thông tin người dùng",
+      });
+
+      setIsEditDialogOpen(false);
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật người dùng",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa người dùng này?")) return;
+
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await adminApi.deleteUser(userId, token);
+
+      toast({
+        title: "Thành công",
+        description: "Đã xóa người dùng",
+      });
+
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa người dùng",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.full_name &&
+        user.full_name.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
-  const totalUsers = mockUsers.length;
-  const activeUsers = mockUsers.filter((u) => u.status === "active").length;
-  const adminUsers = mockUsers.filter((u) => u.role === "admin").length;
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => u.is_active).length;
+  const adminUsers = users.filter((u) => u.is_admin).length;
+
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
     <Suspense fallback={<Loading />}>
@@ -208,19 +280,22 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-semibold">
-                          {user.name.charAt(0)}
+                          {(user.full_name || user.username)
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            {user.email}
+                          <p className="font-medium">
+                            {user.full_name || user.username}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            @{user.username}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {user.role === "admin" ? (
+                      {user.is_admin ? (
                         <Badge variant="destructive" className="gap-1">
                           <Shield className="h-3 w-3" />
                           Admin
@@ -233,29 +308,26 @@ export default function AdminUsersPage() {
                       <Badge
                         variant="secondary"
                         className={
-                          user.status === "active"
+                          user.is_active
                             ? "bg-success/10 text-success"
                             : "bg-muted text-muted-foreground"
                         }
                       >
-                        {user.status === "active" ? "Active" : "Inactive"}
+                        {user.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        {user.documentsUploaded}
+                        <FileText className="h-4 w-4 text-muted-foreground" />0
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {user.lastActive}
-                      </span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.created_at).toLocaleDateString()}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -270,13 +342,18 @@ export default function AdminUsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Edit User</DropdownMenuItem>
-                          <DropdownMenuItem>View Documents</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleEditUser(user)}
+                          >
+                            Edit User
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {user.role !== "admin" && (
-                            <DropdownMenuItem className="text-destructive">
-                              Deactivate User
+                          {!user.is_admin && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              Delete User
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -288,6 +365,91 @@ export default function AdminUsersPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Chỉnh Sửa Người Dùng</DialogTitle>
+              <DialogDescription>
+                Cập nhật thông tin và quyền của người dùng
+              </DialogDescription>
+            </DialogHeader>
+            {editingUser && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-username">Tên Đăng Nhập</Label>
+                  <Input
+                    id="edit-username"
+                    value={editingUser.username}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-fullname">Tên Đầy Đủ</Label>
+                  <Input
+                    id="edit-fullname"
+                    value={editingUser.full_name || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        full_name: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Tài Khoản Hoạt Động</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Cho phép người dùng đăng nhập
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingUser.is_active}
+                    onCheckedChange={(checked) =>
+                      setEditingUser({ ...editingUser, is_active: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Quyền Quản Trị</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Cấp quyền quản trị viên
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingUser.is_admin}
+                    onCheckedChange={(checked) =>
+                      setEditingUser({ ...editingUser, is_admin: checked })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={isSaving}
+              >
+                Hủy
+              </Button>
+              <Button onClick={handleSaveUser} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  "Lưu Thay Đổi"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Suspense>
   );

@@ -11,6 +11,7 @@ import {
   ChevronDown,
   MessageSquare,
   Crown,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,12 @@ const proNavItems = [
     icon: FolderOpen,
     label: "Tất Cả Tài Liệu",
     href: "/dashboard/documents",
+  },
+  {
+    icon: FileText,
+    label: "Phân Tích Bản Vẽ",
+    href: "/dashboard/blueprint",
+    badge: "Pro",
   },
 ];
 
@@ -87,7 +94,7 @@ export function DashboardSidebar() {
               key={item.label}
               href={item.href}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
@@ -95,6 +102,11 @@ export function DashboardSidebar() {
             >
               <item.icon className="h-5 w-5" />
               {item.label}
+              {item.badge && (
+                <span className="ml-auto text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

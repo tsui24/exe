@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -19,12 +19,12 @@ export default function AdminLayout({
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push("/login");
-      } else if (user.role !== "admin") {
-        router.push("/dashboard");
+        window.location.href = "/login";
+      } else if (!user.is_admin) {
+        window.location.href = "/dashboard";
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading]);
 
   if (isLoading) {
     return (
@@ -34,7 +34,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user || !user.is_admin) {
     return null;
   }
 

@@ -15,7 +15,6 @@ import { authApi } from "@/lib/api-client";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,8 +22,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<UserPlan>("normal");
-  const { login } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<"normal" | "pro">("normal");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,16 +30,6 @@ export default function RegisterPage() {
     setError("");
 
     // Validation
-    if (!fullName.trim()) {
-      setError("Vui lòng nhập họ tên");
-      return;
-    }
-
-    if (!phone.trim() || phone.length < 10) {
-      setError("Vui lòng nhập số điện thoại hợp lệ");
-      return;
-    }
-
     if (username.length < 3) {
       setError("Tên đăng nhập phải có ít nhất 3 ký tự");
       return;
@@ -61,31 +49,31 @@ export default function RegisterPage() {
 
     try {
       // Call register API
-      const result = await authApi.register({
+      const user = await authApi.register({
         username,
-        phone,
         password,
+        full_name: fullName || undefined,
       });
 
-      if ("error" in result) {
-        setError(result.error);
-        setIsLoading(false);
-        return;
-      }
-
       // Auto login after successful registration
-      const loginSuccess = await login(phone, password, selectedPlan);
-      if (loginSuccess) {
-        router.push("/dashboard");
-      } else {
-        setError(
-          "Đăng ký thành công nhưng không thể đăng nhập. Vui lòng thử đăng nhập lại.",
-        );
-      }
-    } catch (error) {
+      const tokenResponse = await authApi.login({ username, password });
+
+      // Store token and user info BEFORE redirect
+      localStorage.setItem("access_token", tokenResponse.access_token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user_plan", selectedPlan);
+
+      // Wait a bit to ensure localStorage is written
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Trigger auth context reload
+      window.dispatchEvent(new Event("storage"));
+
+      // Redirect to dashboard with full page reload
+      window.location.href = "/dashboard";
+    } catch (error: any) {
       console.error("Registration error:", error);
-      setError("Đăng ký thất bại. Vui lòng thử lại.");
-    } finally {
+      setError(error.message || "Đăng ký thất bại. Vui lòng thử lại.");
       setIsLoading(false);
     }
   };
@@ -155,41 +143,28 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và Tên</Label>
+                <Label htmlFor="username">Tên Đăng Nhập</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Chọn tên đăng nhập (tối thiểu 3 ký tự)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoComplete="username"
+                  minLength={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Họ và Tên (tùy chọn)</Label>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Nhập họ và tên"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  required
                   autoComplete="name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Số Điện Thoại</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="Nhập số điện thoại"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  autoComplete="tel"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="username">Tên Đăng Nhập</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Chọn tên đăng nhập"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  autoComplete="username"
                 />
               </div>
 
@@ -205,6 +180,7 @@ export default function RegisterPage() {
                     required
                     autoComplete="new-password"
                     className="pr-10"
+                    minLength={6}
                   />
                   <Button
                     type="button"
@@ -251,7 +227,11 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -275,22 +255,6 @@ export default function RegisterPage() {
                   Đăng nhập ngay
                 </Link>
               </p>
-            </div>
-
-            <div className="mt-6 rounded-lg bg-muted/50 p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                Các gói dịch vụ:
-              </p>
-              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <p>
-                  <span className="font-medium">Cơ Bản:</span> Hỏi đáp AI không
-                  giới hạn về TCVN/QCVN
-                </p>
-                <p>
-                  <span className="font-medium">Pro:</span> Tải lên tài liệu,
-                  phân tích & báo cáo tuân thủ
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
