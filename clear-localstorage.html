@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Clear LocalStorage</title>
+  </head>
+
+  <body>
+    <h1>Xóa dữ liệu localStorage</h1>
+    <button onclick="clearData()">Xóa Documents</button>
+    <div id="result"></div>
+
+    <script>
+      function clearData() {
+        localStorage.removeItem("vietbuild_documents");
+        document.getElementById("result").innerHTML =
+          '<p style="color: green;">Đã xóa documents khỏi localStorage!</p>';
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+# BƯỚC 1: Upload file ZIP từ Windows (mở PowerShell mới)
+scp -i D:\exe-deploy.pem deploy_20260206_095649.zip ubuntu@44.222.156.122:/home/ubuntu/
+
+# BƯỚC 2: Trong SSH session đang mở, chạy:
+ls -la ~/ | grep deploy
+
+# Giải nén file (ghi đè file cũ)
+unzip -o deploy_20260206_095649.zip -d /home/ubuntu/constructioniq
+
+# Chuyển vào thư mục project
+cd /home/ubuntu/constructioniq
+
+# Chạy script setup tự động
+bash ec2-setup-commands.sh
+
+# Hoặc chạy từng lệnh thủ công:
+# source venv/bin/activate
+# pip install google-genai Pillow
+# sudo systemctl restart backend
+# npm install
+# npm run build
+# pm2 restart frontend
