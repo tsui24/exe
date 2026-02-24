@@ -21,18 +21,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  useDocuments,
-  type Document,
-  type AnalysisResult,
-} from "@/lib/document-context";
 import { useAuth } from "@/lib/auth-context";
 import { ChatOnly } from "@/components/dashboard/chat-only";
+import { documentApi, chatApi } from "@/lib/api-client";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  sources?: Array<{
+    title?: string;
+    content?: string;
+    metadata?: Record<string, any>;
+  }>;
 }
 
 // Mock analysis results generator
@@ -134,17 +137,46 @@ export default function DashboardUploadPage() {
 
 function ProDashboard() {
   const [dragActive, setDragActive] = useState(false);
-  const [activeDocument, setActiveDocument] = useState<Document | null>(null);
+  const [activeDocument, setActiveDocument] = useState<any | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    number | null
+  >(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const { documents, addDocument, updateDocument } = useDocuments();
   const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Load documents from backend
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  const loadDocuments = async () => {
+    try {
+      setIsLoadingDocuments(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+      const docs = await documentApi.list(token);
+      setDocuments(docs);
+    } catch (error) {
+      console.error("Error loading documents:", error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
 
   // Filter only ready documents for this session
-  const readyDocuments = documents.filter((d) => d.status === "ready");
+  const readyDocuments = documents.filter(
+    (d) => d.status === "ready" || d.status === "processed",
+  );
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -160,52 +192,61 @@ function ProDashboard() {
     }
   }, []);
 
-  const simulateProcessing = useCallback(
-    (docId: string) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 15 + 5;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          const analysis = generateMockAnalysis();
-          updateDocument(docId, {
-            status: "ready",
-            progress: 100,
-            analysisResults: analysis,
-          });
-        } else {
-          updateDocument(docId, {
-            progress: Math.min(progress, 99),
-            status: "processing",
-          });
-        }
-      }, 500);
-    },
-    [updateDocument],
-  );
-
   const handleFiles = useCallback(
-    (files: FileList) => {
-      Array.from(files).forEach((file) => {
-        const docId = addDocument({
-          name: file.name,
-          type: file.type || "application/pdf",
-          size: file.size,
-          status: "uploading",
-          progress: 0,
-          uploadedBy: user?.username || "unknown",
-          pages: Math.floor(Math.random() * 50) + 5,
-        });
+    async (files: FileList) => {
+      const fileArray = Array.from(files);
+      const token = localStorage.getItem("token");
 
-        // Simulate upload then processing
-        setTimeout(() => {
-          updateDocument(docId, { status: "processing", progress: 10 });
-          simulateProcessing(docId);
-        }, 1000);
-      });
+      if (!token) {
+        toast({
+          title: "Lỗi xác thực",
+          description: "Vui lòng đăng nhập lại.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        // Upload each file to backend
+        for (const file of fileArray) {
+          await documentApi.upload(
+            {
+              name: file.name,
+              type: file.type.includes("pdf")
+                ? "pdf"
+                : file.type.includes("word")
+                  ? "docx"
+                  : file.type.includes("sheet")
+                    ? "xlsx"
+                    : file.type.includes("image")
+                      ? "image"
+                      : "pdf",
+              size: file.size,
+            },
+            token,
+          );
+        }
+
+        // Reload documents from backend
+        await loadDocuments();
+
+        // Show error notification for all uploads (as per requirement)
+        toast({
+          title: "Upload thất bại",
+          description:
+            "Tài liệu đã được lưu vào database nhưng xử lý thất bại. Vui lòng thử lại sau.",
+          variant: "destructive",
+        });
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast({
+          title: "Lỗi upload",
+          description: "Không thể upload tài liệu. Vui lòng thử lại.",
+          variant: "destructive",
+        });
+      }
     },
-    [addDocument, updateDocument, user, simulateProcessing],
+    [user, loadDocuments],
   );
 
   const handleDrop = useCallback(
@@ -229,8 +270,8 @@ function ProDashboard() {
     [handleFiles],
   );
 
-  const handleSendMessage = useCallback(() => {
-    if (!inputValue.trim() || !activeDocument) return;
+  const handleSendMessage = useCallback(async () => {
+    if (!inputValue.trim()) return;
 
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
@@ -239,33 +280,86 @@ function ProDashboard() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const messageContent = inputValue.trim();
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const lowerInput = inputValue.toLowerCase();
-      let response = mockResponses.default;
-      if (lowerInput.includes("fire") || lowerInput.includes("cháy")) {
-        response = mockResponses.fire;
-      } else if (
-        lowerInput.includes("concrete") ||
-        lowerInput.includes("bê tông")
-      ) {
-        response = mockResponses.concrete;
+    try {
+      // Call real chat API
+      const response = await chatApi.sendMessage({
+        message: messageContent,
+        conversation_id: currentConversationId || undefined,
+        chat_history: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+
+      // Priority: sources > message
+      let displayContent = response.message;
+
+      if (response.sources && response.sources.length > 0) {
+        // Deduplicate sources based on content only (ignore section_title variations)
+        const uniqueSources = response.sources.reduce((acc, src) => {
+          const contentKey = (src.content || "").trim();
+          if (contentKey && !acc.has(contentKey)) {
+            acc.set(contentKey, src);
+          }
+          return acc;
+        }, new Map());
+
+        const deduplicatedSources = Array.from(uniqueSources.values());
+
+        // If we have unique sources, format them nicely
+        if (deduplicatedSources.length > 0) {
+          displayContent = deduplicatedSources
+            .map((src, idx) => {
+              let srcText = `**📚 Nguồn ${idx + 1}**`;
+
+              // Add filename if available
+              const filename = (src as any).filename;
+              const sectionTitle = (src as any).section_title;
+
+              if (filename || sectionTitle) {
+                srcText += " - ";
+                if (filename) srcText += `_${filename}_`;
+                if (sectionTitle) srcText += ` (${sectionTitle})`;
+              } else if (src.title) {
+                srcText += ` - ${src.title}`;
+              }
+
+              srcText += "\n\n";
+              if (src.content) srcText += src.content;
+
+              return srcText;
+            })
+            .join("\n\n---\n\n");
+        }
       }
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: "assistant",
-        content: response,
+        content: displayContent,
+        sources: response.sources,
       };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
-  }, [inputValue, activeDocument]);
 
-  const selectDocument = (doc: Document) => {
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        role: "assistant",
+        content:
+          "Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn. Vui lòng thử lại.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  }, [inputValue, currentConversationId, messages]);
+
+  const selectDocument = (doc: any) => {
     setActiveDocument(doc);
     setMessages([
       {
@@ -375,22 +469,30 @@ What would you like to know about this document?`,
             <CardTitle className="text-base">Recent Uploads</CardTitle>
           </CardHeader>
           <CardContent className="max-h-[calc(100%-4rem)] overflow-y-auto">
-            {documents.length === 0 ? (
+            {isLoadingDocuments ? (
+              <div className="py-8 text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Loading documents...
+                </p>
+              </div>
+            ) : documents.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No documents uploaded yet
               </p>
             ) : (
               <div className="space-y-2">
-                {documents.map((doc) => (
+                {documents.slice(0, 5).map((doc) => (
                   <div
                     key={doc.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
                       activeDocument?.id === doc.id
                         ? "border-primary bg-primary/5"
                         : "border-border hover:bg-muted/50"
-                    } ${doc.status !== "ready" ? "opacity-70" : ""}`}
+                    } ${doc.status !== "processed" && doc.status !== "ready" ? "opacity-70" : ""}`}
                     onClick={() =>
-                      doc.status === "ready" && selectDocument(doc)
+                      (doc.status === "processed" || doc.status === "ready") &&
+                      selectDocument(doc)
                     }
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -399,11 +501,10 @@ What would you like to know about this document?`,
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{doc.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {doc.pages} pages
+                        {doc.type || "unknown"}
                       </p>
-                      {(doc.status === "uploading" ||
-                        doc.status === "processing") && (
-                        <Progress value={doc.progress} className="mt-2 h-1.5" />
+                      {doc.status === "processing" && (
+                        <Progress value={50} className="mt-2 h-1.5" />
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -541,6 +642,7 @@ What would you like to know about this document?`,
           </>
         )}
       </Card>
+      <Toaster />
     </div>
   );
 }

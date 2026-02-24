@@ -1,12 +1,16 @@
-"""
-Database layer for PDF management using SQLite with async support.
-"""
-
 import aiosqlite
 import os
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
+# =============================================================================
+# Local PDF Management (Async SQLite)
+# =============================================================================
 
 # Database file location
 DB_PATH = Path(__file__).parent / "pdfs.db"
@@ -14,8 +18,7 @@ DB_PATH = Path(__file__).parent / "pdfs.db"
 
 async def init_database() -> None:
     """
-    Initialize the database schema.
-    Creates the pdfs table and indexes if they don't exist.
+    Initialize the database schema for PDF metadata.
     """
     async with aiosqlite.connect(DB_PATH) as db:
         # Create pdfs table
@@ -45,17 +48,11 @@ async def init_database() -> None:
 
 
 @asynccontextmanager
-async def get_db():
+async def get_pdf_db():
     """
-    Async context manager for database connections.
-    
-    Usage:
-        async with get_db() as db:
-            cursor = await db.execute("SELECT * FROM pdfs")
-            rows = await cursor.fetchall()
+    Async context manager for PDF database connections (SQLite).
     """
     async with aiosqlite.connect(DB_PATH) as db:
-        # Enable row factory for dict-like access
         db.row_factory = aiosqlite.Row
         yield db
 
@@ -67,16 +64,7 @@ async def insert_pdf(
     file_size: int,
     storage_path: str
 ) -> int:
-    """
-    Insert a new PDF record into the database.
-    
-    Returns:
-        int: The ID of the inserted record
-    
-    Raises:
-        aiosqlite.IntegrityError: If (user_id, filename) already exists
-    """
-    async with get_db() as db:
+    async with get_pdf_db() as db:
         cursor = await db.execute(
             """
             INSERT INTO pdfs (user_id, filename, file_hash, file_size, storage_path)
@@ -89,14 +77,7 @@ async def insert_pdf(
 
 
 async def get_pdf_by_name(user_id: str, filename: str) -> Optional[dict]:
-    """
-    Get a PDF record by user_id and filename.
-    
-    Returns:
-        dict with keys: id, user_id, filename, file_hash, file_size, storage_path, upload_date
-        or None if not found
-    """
-    async with get_db() as db:
+    async with get_pdf_db() as db:
         cursor = await db.execute(
             """
             SELECT id, user_id, filename, file_hash, file_size, storage_path, upload_date
@@ -112,13 +93,7 @@ async def get_pdf_by_name(user_id: str, filename: str) -> Optional[dict]:
 
 
 async def get_pdf_by_hash(user_id: str, file_hash: str) -> Optional[dict]:
-    """
-    Get a PDF record by user_id and file_hash (to detect duplicates).
-    
-    Returns:
-        dict or None if not found
-    """
-    async with get_db() as db:
+    async with get_pdf_db() as db:
         cursor = await db.execute(
             """
             SELECT id, user_id, filename, file_hash, file_size, storage_path, upload_date
@@ -134,13 +109,7 @@ async def get_pdf_by_hash(user_id: str, file_hash: str) -> Optional[dict]:
 
 
 async def get_user_pdfs(user_id: str) -> list[dict]:
-    """
-    Get all PDFs for a specific user.
-    
-    Returns:
-        list of dicts, each with keys: filename, file_size, upload_date
-    """
-    async with get_db() as db:
+    async with get_pdf_db() as db:
         cursor = await db.execute(
             """
             SELECT filename, file_size, upload_date
@@ -154,14 +123,8 @@ async def get_user_pdfs(user_id: str) -> list[dict]:
         return [dict(row) for row in rows]
 
 
-async def delete_pdf(user_id: str, filename: str) -> bool:
-    """
-    Delete a PDF record from the database.
-    
-    Returns:
-        bool: True if a record was deleted, False if not found
-    """
-    async with get_db() as db:
+async def delete_pdf_metadata(user_id: str, filename: str) -> bool:
+    async with get_pdf_db() as db:
         cursor = await db.execute(
             """
             DELETE FROM pdfs
@@ -171,3 +134,48 @@ async def delete_pdf(user_id: str, filename: str) -> bool:
         )
         await db.commit()
         return cursor.rowcount > 0
+
+
+# =============================================================================
+# Remote Auth & Admin Management (SQLAlchemy)
+# =============================================================================
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Database URL
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "mysql+pymysql://root:@localhost:3306/ki8_exe"
+)
+
+# Create engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    echo=False
+)
+
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create Base class for models
+Base = declarative_base()
+
+
+def get_db():
+    """
+    Dependency function to get database session (SQLAlchemy).
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """
+    Initialize database tables (SQLAlchemy).
+    """
+    Base.metadata.create_all(bind=engine)

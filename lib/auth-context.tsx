@@ -7,20 +7,23 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { authApi, type UserResponse } from "./api-client";
 
-export type UserRole = "user" | "admin";
 export type UserPlan = "normal" | "pro";
 
 export interface User {
+  id: number;
   username: string;
-  role: UserRole;
-  plan: UserPlan;
-  name: string;
+  full_name?: string;
+  plan?: UserPlan;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, plan?: UserPlan) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -32,46 +35,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("vietbuild_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const loadUser = () => {
+      // Check both old and new localStorage keys for backward compatibility
+      const storedUser =
+        localStorage.getItem("user") || localStorage.getItem("vietbuild_user");
+      const storedToken = localStorage.getItem("access_token");
+
+      if (storedUser && storedToken) {
+        try {
+          const userData = JSON.parse(storedUser);
+          const userPlan = localStorage.getItem("user_plan") as UserPlan | null;
+          setUser({ ...userData, plan: userPlan || "normal" });
+        } catch (e) {
+          console.error("Failed to parse stored user:", e);
+          localStorage.removeItem("user");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user_plan");
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadUser();
+
+    // Listen for storage events (from login page)
+    window.addEventListener("storage", loadUser);
+    return () => window.removeEventListener("storage", loadUser);
   }, []);
 
-  const login = (username: string, password: string, plan: UserPlan = "normal"): boolean => {
-    // Admin credentials
-    if (username === "admin" && password === "admin") {
-      const adminUser: User = {
-        username: "admin",
-        role: "admin",
-        plan: "pro",
-        name: "Administrator",
-      };
-      setUser(adminUser);
-      localStorage.setItem("vietbuild_user", JSON.stringify(adminUser));
+  const login = async (
+    username: string,
+    password: string,
+  ): Promise<boolean> => {
+    try {
+      // Call backend API
+      const tokenResponse = await authApi.login({ username, password });
+
+      // Store token
+      localStorage.setItem("access_token", tokenResponse.access_token);
+
+      // Get user info
+      const userInfo = await authApi.getCurrentUser(tokenResponse.access_token);
+      const userPlan = localStorage.getItem("user_plan") as UserPlan | null;
+
+      // Store user info
+      const userWithPlan = { ...userInfo, plan: userPlan || "normal" };
+      setUser(userWithPlan);
       return true;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
     }
-    
-    // Regular user (any non-empty username/password)
-    if (username && password) {
-      const regularUser: User = {
-        username,
-        role: "user",
-        plan,
-        name: username.charAt(0).toUpperCase() + username.slice(1),
-      };
-      setUser(regularUser);
-      localStorage.setItem("vietbuild_user", JSON.stringify(regularUser));
-      return true;
-    }
-    
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("vietbuild_user");
+    localStorage.removeItem("user");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_plan");
+    localStorage.removeItem("vietbuild_user"); // Remove old key too
   };
 
   return (

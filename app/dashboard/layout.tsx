@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -18,9 +18,10 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
+      // Use full page redirect to avoid state issues
+      window.location.href = "/login";
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading]);
 
   if (isLoading) {
     return (

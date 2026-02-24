@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { authApi } from "@/lib/api-client";
 import {
   Card,
   CardContent,
@@ -31,6 +32,7 @@ import {
   Palette,
   Shield,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,11 +41,12 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   // Personal Information
-  const [fullName, setFullName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
+  const [fullName, setFullName] = useState(user?.full_name || "");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Password Change
   const [currentPassword, setCurrentPassword] = useState("");
@@ -52,20 +55,56 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [documentNotifications, setDocumentNotifications] = useState(true);
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
 
-  const handleSaveProfile = () => {
-    toast({
-      title: "Đã lưu thay đổi",
-      description: "Thông tin hồ sơ của bạn đã được cập nhật thành công.",
-    });
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await authApi.updateProfile(
+        {
+          full_name: fullName || undefined,
+          phone: phone || undefined,
+          company: company || undefined,
+          address: address || undefined,
+        },
+        token,
+      );
+
+      // Update localStorage
+      const updatedUser = { ...user, full_name: fullName };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      toast({
+        title: "Đã lưu thay đổi",
+        description: "Thông tin hồ sơ của bạn đã được cập nhật thành công.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật hồ sơ",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({
         title: "Lỗi",
@@ -84,15 +123,44 @@ export default function ProfilePage() {
       return;
     }
 
-    toast({
-      title: "Đã đổi mật khẩu",
-      description: "Mật khẩu của bạn đã được cập nhật thành công.",
-    });
+    setIsChangingPassword(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Reset fields
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+      await authApi.changePassword(
+        {
+          current_password: currentPassword,
+          new_password: newPassword,
+        },
+        token,
+      );
+
+      toast({
+        title: "Đã đổi mật khẩu",
+        description: "Mật khẩu của bạn đã được cập nhật thành công.",
+      });
+
+      // Reset fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể đổi mật khẩu",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -117,11 +185,17 @@ export default function ProfilePage() {
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
-                {user?.name?.charAt(0).toUpperCase() || "U"}
+                {user?.full_name?.charAt(0).toUpperCase() ||
+                  user?.username?.charAt(0).toUpperCase() ||
+                  "U"}
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">{user?.name}</h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <h3 className="text-lg font-semibold">
+                  {user?.full_name || user?.username}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {user?.username}
+                </p>
                 <div className="mt-2 flex items-center gap-2">
                   {user?.plan === "pro" ? (
                     <Badge className="bg-amber-500 hover:bg-amber-600">
@@ -223,9 +297,18 @@ export default function ProfilePage() {
             <Separator />
 
             <div className="flex justify-end">
-              <Button onClick={handleSaveProfile}>
-                <Save className="mr-2 h-4 w-4" />
-                Lưu Thay Đổi
+              <Button onClick={handleSaveProfile} disabled={isSavingProfile}>
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Lưu Thay Đổi
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -328,9 +411,21 @@ export default function ProfilePage() {
             <Separator />
 
             <div className="flex justify-end">
-              <Button onClick={handleChangePassword}>
-                <Lock className="mr-2 h-4 w-4" />
-                Cập Nhật Mật Khẩu
+              <Button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Cập Nhật Mật Khẩu
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>

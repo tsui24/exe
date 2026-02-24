@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2, Eye, EyeOff, Loader2, Crown, User } from "lucide-react";
@@ -10,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useAuth, type UserPlan } from "@/lib/auth-context";
+import { authApi } from "@/lib/api-client";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -18,8 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<UserPlan>("normal");
-  const { login } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<"normal" | "pro">("normal");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,21 +24,41 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      console.log("Logging in with username:", username);
+      const response = await authApi.login({ username, password });
+      console.log("Login response:", response);
 
-    const success = login(username, password, selectedPlan);
-    if (success) {
-      // Check if admin
-      if (username === "admin" && password === "admin") {
-        router.push("/admin");
+      // Store token in localStorage (both keys for compatibility)
+      localStorage.setItem("token", response.access_token);
+      localStorage.setItem("access_token", response.access_token);
+
+      // Get user info
+      const user = await authApi.getCurrentUser(response.access_token);
+      console.log("User info:", user);
+
+      // Store user and plan BEFORE redirect
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user_plan", selectedPlan);
+
+      // Wait a bit to ensure localStorage is written
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Trigger auth context reload with storage event
+      window.dispatchEvent(new Event("storage"));
+
+      // Redirect based on admin status with full page reload
+      console.log("Redirecting to:", user.is_admin ? "/admin" : "/dashboard");
+      if (user.is_admin) {
+        window.location.href = "/admin";
       } else {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
-    } else {
-      setError("Invalid username or password");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -150,7 +167,11 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -174,36 +195,6 @@ export default function LoginPage() {
                   Đăng ký ngay
                 </Link>
               </p>
-            </div>
-
-            <div className="mt-6 rounded-lg bg-muted/50 p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                Tài khoản demo:
-              </p>
-              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <p>
-                  <span className="font-medium">Quản trị viên:</span> admin /
-                  admin
-                </p>
-                <p>
-                  <span className="font-medium">Người dùng:</span> bất kỳ tên /
-                  bất kỳ mật khẩu
-                </p>
-              </div>
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Các loại tài khoản:
-                </p>
-                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  <p>
-                    <span className="font-medium">Cơ Bản:</span> Chỉ hỏi đáp AI
-                  </p>
-                  <p>
-                    <span className="font-medium">Pro:</span> Tải lên, Phân tích
-                    & Tất cả Tài liệu
-                  </p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

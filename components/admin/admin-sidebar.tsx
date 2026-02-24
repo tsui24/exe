@@ -11,6 +11,7 @@ import {
   LogOut,
   Shield,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,11 @@ const navItems = [
     icon: FileText,
     label: "Tất Cả Tài Liệu",
     href: "/admin/documents",
+  },
+  {
+    icon: MessageSquare,
+    label: "Phản Hồi AI",
+    href: "/admin/feedbacks",
   },
   {
     icon: Settings,
