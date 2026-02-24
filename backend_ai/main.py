@@ -106,8 +106,13 @@ app.add_middleware(
 async def startup_event():
     """Initialize databases on startup."""
     await init_database() # PDF SQLite
-    init_db() # Auth MySQL
-    print("Databases initialized successfully!")
+    try:
+        init_db() # Auth MySQL
+        print("SQLAlchemy/MySQL database initialized successfully!")
+    except Exception as e:
+        print(f"WARNING: SQLAlchemy/MySQL database initialization failed: {e}")
+        print("Authentication and Admin features might not work without a running MySQL server.")
+    print("Startup process completed.")
 
 @app.get("/health", tags=["system"])
 async def health_check() -> dict:
