@@ -3,16 +3,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 import os
 import tempfile
 import time
 import random
 
 from .openai_client import chat_with_model
-from .gemini_client import chat_inline_pdf, upload_file_to_gemini, chat_with_file_api, chat_smart_pdf, chat_with_image, chat_inline_image
+from .gemini_client import (
+    chat_inline_pdf, upload_file_to_gemini, chat_with_file_api, 
+    chat_smart_pdf, chat_with_image, chat_inline_image, chat_pdf_from_path
+)
 from .prompt import IMAGE_SYSTEM_PROMPT, SYSTEM_PROMPT
 from .database import get_db, init_db
+from .database_pdf import init_database
+from . import pdf_storage
 from .models import User, Document, Feedback, Payment, SubscriptionPlan, PaymentStatus
 from .schemas import (
     UserCreate, UserLogin, UserResponse, Token,
@@ -40,6 +45,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
 class PDFInlineChatRequest(BaseModel):
     message: str
     pdf_base64: str
@@ -48,7 +54,6 @@ class PDFInlineChatRequest(BaseModel):
 class PDFFileChatRequest(BaseModel):
     message: str
     file_uri: str
-
 
 
 class UploadResponse(BaseModel):
@@ -64,9 +69,32 @@ class ChatImageResponse(BaseModel):
     reply: str
 
 
+# New models for PDF management (from main_1.py)
+class PDFUploadResponse(BaseModel):
+    filename: str
+    is_new: bool
+    file_hash: str
+    file_size: int
+
+
+class PDFChatRequest(BaseModel):
+    user_id: str
+    pdf_name: str
+    message: str
+
+
+class PDFListResponse(BaseModel):
+    pdfs: list[dict]
+
+
+class PDFDeleteResponse(BaseModel):
+    success: bool
+    message: str
+
+
 app = FastAPI(
     title="backend-ai",
-    description="Simple FastAPI service that proxies requests to OpenAI ChatGPT.",
+    description="Simple FastAPI service that proxies requests to OpenAI ChatGPT and handles PDF management.",
     version="0.1.0",
     docs_url="/docs",
     openapi_url="/openapi.json",
@@ -93,9 +121,17 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup."""
-    init_db()
-    print("Database initialized successfully!")
+    """Initialize databases on startup."""
+    # Initialize SQL PDF database (SQLite)
+    await init_database()
+    # Initialize Auth/Admin database (MySQL)
+    try:
+        init_db()
+        print("SQLAlchemy/MySQL database initialized successfully!")
+    except Exception as e:
+        print(f"WARNING: SQLAlchemy/MySQL database initialization failed: {e}")
+        print("Authentication and Admin features might not work without a running MySQL server.")
+    print("Startup process completed.")
 
 
 @app.get("/health", tags=["system"])
@@ -112,14 +148,12 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Chat endpoint that forwards the user message (và context nếu có) tới OpenAI.
     """
     try:
-        # `chat_with_model` là hàm đồng bộ, nên gọi trực tiếp không dùng `await`.
         reply = chat_with_model(
             user_message=request.message,
         )
     except RuntimeError as exc:
-        # Lỗi cấu hình (ví dụ thiếu API key)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - catch-all
+    except Exception as exc:
         raise HTTPException(status_code=500, detail="Internal error") from exc
 
     return ChatResponse(reply=reply)
@@ -133,12 +167,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user.
-    
-    - **username**: Username (must be unique, 3-100 characters)
-    - **password**: Password (minimum 6 characters)
-    - **full_name**: Optional full name
     """
-    # Check if username already exists
     existing_username = get_user_by_username(db, username=user_data.username)
     if existing_username:
         raise HTTPException(
@@ -146,7 +175,6 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Username already taken"
         )
     
-    # Create new user
     hashed_password = get_password_hash(user_data.password)
     db_user = User(
         username=user_data.username,
@@ -167,11 +195,6 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     """
     Login with username and password to get access token.
-    
-    - **username**: User's username
-    - **password**: User's password
-    
-    Returns JWT access token that should be included in subsequent requests.
     """
     user = authenticate_user(db, user_credentials.username, user_credentials.password)
     
@@ -188,7 +211,6 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Inactive user account"
         )
     
-    # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username, "user_id": user.id},
@@ -202,8 +224,6 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """
     Get current logged-in user information.
-    
-    Requires valid JWT token in Authorization header.
     """
     return current_user
 
@@ -220,18 +240,9 @@ async def update_profile(
 ):
     """
     Update current user's profile information.
-    
-    - **full_name**: User's full name
-    - **phone**: Phone number (optional)
-    - **company**: Company name (optional)
-    - **address**: Address (optional)
     """
-    # Update user fields
     if user_data.full_name is not None:
         current_user.full_name = user_data.full_name
-    
-    # Note: phone, company, address fields are not in the current User model
-    # You may need to add these fields to the User model if needed
     
     db.commit()
     db.refresh(current_user)
@@ -247,18 +258,13 @@ async def change_password(
 ):
     """
     Change current user's password.
-    
-    - **current_password**: User's current password
-    - **new_password**: New password (minimum 6 characters)
     """
-    # Verify current password
     if not verify_password(password_data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect"
         )
     
-    # Update password
     current_user.hashed_password = get_password_hash(password_data.new_password)
     db.commit()
     
@@ -278,9 +284,6 @@ async def list_users(
 ):
     """
     List all users (Admin only).
-    
-    - **skip**: Number of records to skip (for pagination)
-    - **limit**: Maximum number of records to return
     """
     users = db.query(User).offset(skip).limit(limit).all()
     return users
@@ -313,10 +316,6 @@ async def update_user(
 ):
     """
     Update user information (Admin only).
-    
-    - **full_name**: User's full name
-    - **is_active**: Active status
-    - **is_admin**: Admin role
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -325,7 +324,6 @@ async def update_user(
             detail="User not found"
         )
     
-    # Update fields
     if user_data.full_name is not None:
         user.full_name = user_data.full_name
     if user_data.is_active is not None:
@@ -355,7 +353,6 @@ async def delete_user(
             detail="User not found"
         )
     
-    # Prevent deleting yourself
     if user.id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -379,21 +376,14 @@ async def upload_document(
     db: Session = Depends(get_db)
 ):
     """
-    Upload a document (simulated upload - always returns error status).
-    
-    - **name**: Document name
-    - **type**: Document type (pdf, docx, image, xlsx)
-    - **size**: File size in bytes
-    
-    Note: This endpoint simulates upload failure but still saves document to database.
+    Upload a document (simulated upload).
     """
-    # Create document with error status (simulating upload failure)
     new_document = Document(
         user_id=current_user.id,
         name=document_data.name,
         type=document_data.type,
         size=document_data.size,
-        status="error"  # Always set to error for now
+        status="error"  # Always set to error for now per previous requirement
     )
     
     db.add(new_document)
@@ -412,9 +402,6 @@ async def list_user_documents(
 ):
     """
     List all documents for current user.
-    
-    - **skip**: Number of records to skip (for pagination)
-    - **limit**: Maximum number of records to return
     """
     documents = db.query(Document).filter(
         Document.user_id == current_user.id
@@ -485,9 +472,6 @@ async def list_all_documents(
 ):
     """
     List all documents from all users (Admin only).
-    
-    - **skip**: Number of records to skip (for pagination)
-    - **limit**: Maximum number of records to return
     """
     documents = db.query(Document).offset(skip).limit(limit).all()
     return documents
@@ -503,11 +487,6 @@ async def create_feedback(
 ):
     """
     Create feedback for AI chat response.
-    
-    - **message**: User's original message
-    - **ai_response**: AI's response text
-    - **feedback_type**: 'like' or 'dislike'
-    - **comment**: Optional comment (required for dislike)
     """
     db_feedback = Feedback(
         user_id=current_user.id,
@@ -531,9 +510,6 @@ async def list_my_feedbacks(
 ):
     """
     List current user's feedbacks.
-    
-    - **skip**: Number of records to skip (for pagination)
-    - **limit**: Maximum number of records to return
     """
     feedbacks = db.query(Feedback).filter(
         Feedback.user_id == current_user.id
@@ -551,10 +527,6 @@ async def list_all_feedbacks(
 ):
     """
     List all feedbacks from all users (Admin only).
-    
-    - **skip**: Number of records to skip (for pagination)
-    - **limit**: Maximum number of records to return
-    - **feedback_type**: Filter by 'like' or 'dislike' (optional)
     """
     query = db.query(Feedback, User.username).join(User, Feedback.user_id == User.id)
     
@@ -587,12 +559,6 @@ async def get_feedback_stats(
 ):
     """
     Get feedback statistics (Admin only).
-    
-    Returns:
-    - Total feedbacks
-    - Total likes
-    - Total dislikes
-    - Like percentage
     """
     total = db.query(Feedback).count()
     likes = db.query(Feedback).filter(Feedback.feedback_type == "like").count()
@@ -606,7 +572,89 @@ async def get_feedback_stats(
         "total_dislikes": dislikes,
         "like_percentage": round(like_percentage, 2)
     }
-    
+
+
+# =============================================================================
+# PDF Management Endpoints 
+# =============================================================================
+
+@app.post("/pdfs/upload", response_model=PDFUploadResponse, tags=["pdf-management"])
+async def upload_pdf_new(
+    user_id: Annotated[str, Form()],
+    file: UploadFile = File(...)
+) -> PDFUploadResponse:
+    """
+    Upload a PDF file for a user. Handles deduplication automatically.
+    """
+    try:
+        if file.content_type != "application/pdf":
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+        
+        content = await file.read()
+        MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+        if len(content) > MAX_SIZE:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size is 50MB")
+        
+        filename = file.filename or "document.pdf"
+        result = await pdf_storage.save_pdf(user_id=user_id, filename=filename, file_bytes=content)
+        return PDFUploadResponse(**result)
+        
+    except FileExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to upload PDF: {str(exc)}")
+
+
+@app.get("/pdfs/{user_id}", response_model=PDFListResponse, tags=["pdf-management"])
+async def list_user_pdfs(user_id: str) -> PDFListResponse:
+    """
+    List all PDFs for a specific user.
+    """
+    try:
+        pdfs = await pdf_storage.get_user_pdfs(user_id)
+        return PDFListResponse(pdfs=pdfs)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to list PDFs: {str(exc)}")
+
+
+@app.post("/pdfs/chat", response_model=ChatResponse, tags=["pdf-management"])
+async def chat_with_pdf(request: PDFChatRequest) -> ChatResponse:
+    """
+    Chat with a PDF that was previously uploaded.
+    """
+    try:
+        pdf_info = await pdf_storage.get_pdf_info(user_id=request.user_id, filename=request.pdf_name)
+        if not pdf_info:
+            raise HTTPException(status_code=404, detail=f"PDF '{request.pdf_name}' not found")
+        
+        reply = chat_pdf_from_path(prompt=request.message, pdf_path=pdf_info["storage_path"], system_instruction=SYSTEM_PROMPT)
+        return ChatResponse(reply=reply)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to chat with PDF: {str(exc)}")
+
+
+@app.delete("/pdfs/{user_id}/{filename}", response_model=PDFDeleteResponse, tags=["pdf-management"])
+async def delete_user_pdf(user_id: str, filename: str) -> PDFDeleteResponse:
+    """
+    Delete a PDF file for a user.
+    """
+    try:
+        deleted = await pdf_storage.delete_pdf(user_id, filename)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"PDF '{filename}' not found")
+        return PDFDeleteResponse(success=True, message=f"PDF '{filename}' deleted successfully")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete PDF: {str(exc)}")
+
+
+# =============================================================================
+# Gemini AI Chat Endpoints
+# =============================================================================
+
 @app.post("/chat/pdf/inline", response_model=ChatResponse, tags=["pdf"])
 async def chat_pdf_inline(request: PDFInlineChatRequest) -> ChatResponse:
     """
@@ -627,10 +675,8 @@ async def chat_pdf_inline(request: PDFInlineChatRequest) -> ChatResponse:
 async def upload_pdf(file: UploadFile = File(...)) -> UploadResponse:
     """
     Upload a PDF file to Gemini Files API.
-    Returns the file URI to be used in `/chat/pdf/file`.
     """
     try:
-        # Read file bytes
         content = await file.read()
         file_uri = upload_file_to_gemini(file_bytes=content, mime_type=file.content_type or "application/pdf")
     except Exception as exc:
@@ -662,9 +708,7 @@ async def chat_pdf_auto(
     file: UploadFile = File(...)
 ) -> ChatResponse:
     """
-    Smart Chat with PDF.
-    - Uploads file and selects strategy (Inline vs Files API) based on size.
-    - System automatically handles the logic.
+    Smart Chat with PDF using temporary upload.
     """
     try:
         content = await file.read()
@@ -682,7 +726,6 @@ async def chat_pdf_auto(
 async def chat_image_inline(request: ChatImageRequest) -> ChatImageResponse:
     """
     Chat with an inline image (Base64 encoded).
-    Suitable for images that can be encoded in base64.
     """
     try:
         reply = chat_inline_image(
@@ -697,28 +740,22 @@ async def chat_image_inline(request: ChatImageRequest) -> ChatImageResponse:
 
 
 @app.post("/chat-image", response_model=ChatImageResponse, tags=["images"])
-
 async def chat_image(
     query: Annotated[str, Form()],
     image: UploadFile = File(...),
 ) -> ChatImageResponse:
     """
     Chat endpoint that analyzes an image using Gemini AI.
-    Accepts an image file, user query, and optional system prompt.
     """
-    # Create a temporary file to save the uploaded image
     temp_file = None
     try:
-        # Create temporary file with the same extension as uploaded file
         suffix = os.path.splitext(image.filename)[1] if image.filename else ".jpg"
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         
-        # Write uploaded image to temporary file
         content = await image.read()
         temp_file.write(content)
         temp_file.close()
         
-        # Call chat_with_image function
         reply = chat_with_image(
             image_path=temp_file.name,
             user_query=query,   
@@ -733,12 +770,11 @@ async def chat_image(
             detail=f"Error processing image: {str(exc)}"
         ) from exc
     finally:
-        # Clean up temporary file
         if temp_file and os.path.exists(temp_file.name):
             try:
                 os.unlink(temp_file.name)
             except Exception:
-                pass  # Ignore cleanup errors
+                pass
 
 
 # ========================
@@ -774,12 +810,7 @@ async def create_payment(
 ):
     """
     Create a payment link for subscription purchase.
-    
-    - **subscription_plan**: Plan to purchase (normal or pro)
-    
-    Returns payment URL for user to complete payment.
     """
-    # Validate plan
     if payment_data.subscription_plan == "free":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -793,10 +824,8 @@ async def create_payment(
             detail="Invalid subscription plan"
         )
     
-    # Generate unique order code
     order_code = int(time.time() * 1000) + random.randint(1000, 9999)
     
-    # Initialize PayOS client
     try:
         payos_client = PayOSClient()
     except ValueError as e:
@@ -805,7 +834,6 @@ async def create_payment(
             detail=f"Payment service not configured: {str(e)}"
         )
     
-    # Create payment record
     payment = Payment(
         user_id=current_user.id,
         order_code=str(order_code),
@@ -818,7 +846,6 @@ async def create_payment(
     db.commit()
     db.refresh(payment)
     
-    # Create payment link
     try:
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
         payment_link = payos_client.create_payment_link(
@@ -832,7 +859,6 @@ async def create_payment(
             buyer_phone=None
         )
         
-        # Update payment record with payment URL
         payment.payment_url = payment_link["payment_url"]
         db.commit()
         
@@ -845,7 +871,6 @@ async def create_payment(
         )
     
     except Exception as e:
-        # Update payment status to failed
         payment.status = PaymentStatus.failed
         db.commit()
         
@@ -862,28 +887,22 @@ async def payment_webhook(
 ):
     """
     Webhook endpoint for PayOS payment notifications.
-    This endpoint is called by PayOS when payment status changes.
     """
     try:
         webhook_data = await request.json()
-        
-        # Initialize PayOS client
         payos_client = PayOSClient()
         
-        # Verify webhook signature
         if not payos_client.verify_webhook_signature(webhook_data):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid webhook signature"
             )
         
-        # Extract payment info
         data = webhook_data.get("data", {})
         order_code = str(data.get("orderCode"))
-        payment_status = data.get("code")  # "00" means success
+        payment_status = data.get("code")
         transaction_id = data.get("id")
         
-        # Find payment record
         payment = db.query(Payment).filter(Payment.order_code == order_code).first()
         if not payment:
             raise HTTPException(
@@ -891,18 +910,14 @@ async def payment_webhook(
                 detail="Payment not found"
             )
         
-        # Update payment status
         if payment_status == "00":
             payment.status = PaymentStatus.completed
             payment.transaction_id = transaction_id
             payment.completed_at = datetime.utcnow()
             
-            # Update user subscription
             user = db.query(User).filter(User.id == payment.user_id).first()
             if user:
                 user.subscription_plan = payment.subscription_plan
-                
-                # Set expiration date
                 plan_info = get_plan_info(payment.subscription_plan)
                 if plan_info:
                     duration_days = plan_info["duration_days"]
@@ -911,7 +926,6 @@ async def payment_webhook(
             payment.status = PaymentStatus.failed
         
         db.commit()
-        
         return {"message": "Webhook processed successfully"}
     
     except Exception as e:
@@ -929,9 +943,7 @@ async def verify_payment(
 ):
     """
     Verify payment status by order code.
-    Users can only check their own payments.
     """
-    # Find payment record
     payment = db.query(Payment).filter(
         Payment.order_code == order_code,
         Payment.user_id == current_user.id
@@ -943,19 +955,16 @@ async def verify_payment(
             detail="Payment not found"
         )
     
-    # Check payment status from PayOS if still pending
     if payment.status == PaymentStatus.pending:
         try:
             payos_client = PayOSClient()
             payment_info = payos_client.get_payment_info(int(order_code))
             
-            # Update payment status based on PayOS response
             if payment_info.get("status") == "PAID":
                 payment.status = PaymentStatus.completed
                 payment.transaction_id = payment_info.get("id")
                 payment.completed_at = datetime.utcnow()
                 
-                # Update user subscription
                 current_user.subscription_plan = payment.subscription_plan
                 plan_info = get_plan_info(payment.subscription_plan)
                 if plan_info:
@@ -964,9 +973,7 @@ async def verify_payment(
                 
                 db.commit()
                 db.refresh(payment)
-            
-        except Exception as e:
-            # If verification fails, just return current payment status
+        except Exception:
             pass
     
     return payment
@@ -1011,7 +1018,6 @@ def main() -> None:
     Entrypoint để chạy dev server trực tiếp bằng `python -m backend_ai.main`.
     """
     import uvicorn
-
     uvicorn.run("backend_ai.main:app", host="0.0.0.0", port=8002, reload=True)
 
 

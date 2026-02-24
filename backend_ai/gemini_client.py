@@ -5,10 +5,7 @@ from google import genai
 from google.genai import types
 from .prompt import SYSTEM_PROMPT, IMAGE_SYSTEM_PROMPT
 from dotenv import load_dotenv
-
-# Load .env from root project directory
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(env_path)
+load_dotenv()
 
 # Use a global client or create one per request depending on best practices.
 # Here we'll instantiate it once if API key is in environment, or let user pass it.
@@ -121,6 +118,31 @@ def chat_smart_pdf(prompt: str, file_bytes: bytes, model: str = "gemini-3-flash-
         return chat_with_file_api(prompt=prompt, file_uri=file_uri, model=model, system_instruction=system_instruction)
 
 
+def chat_pdf_from_path(
+    prompt: str,
+    pdf_path: str,
+    model: str = "gemini-3-flash-preview",
+    system_instruction: str = SYSTEM_PROMPT
+) -> str:
+    """
+    Chat with PDF from a file path on disk.
+    Reads the file and delegates to chat_smart_pdf.
+    
+    Args:
+        prompt: User's message/query
+        pdf_path: Path to the PDF file on disk
+        model: Gemini model to use
+        system_instruction: System instruction for the AI
+    
+    Returns:
+        str: AI's response
+    
+    Raises:
+        FileNotFoundError: If PDF file doesn't exist
+    """
+    with open(pdf_path, 'rb') as f:
+        file_bytes = f.read()
+    return chat_smart_pdf(prompt, file_bytes, model, system_instruction)
 def chat_with_image(
     image_path: str,
     user_query: str,
