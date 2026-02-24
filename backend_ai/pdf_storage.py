@@ -13,7 +13,7 @@ from .database import (
     get_pdf_by_hash,
     insert_pdf,
     get_user_pdfs as db_get_user_pdfs,
-    delete_pdf as db_delete_pdf
+    delete_pdf_metadata as db_delete_pdf
 )
 
 # Base directory for PDF storage
